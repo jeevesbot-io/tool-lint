@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import { FileResult, LintResult, Severity } from '../types';
+import { FileResult, Severity } from '../types';
 import { getScoreColor } from '../scorer';
 
 const SEVERITY_ICONS: Record<Severity, string> = {

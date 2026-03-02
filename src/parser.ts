@@ -77,7 +77,7 @@ function detectFormat(data: any): SchemaFormat {
   return 'unknown';
 }
 
-function extractTools(data: any, format: SchemaFormat): ToolDefinition[] {
+function extractTools(data: any, _format: SchemaFormat): ToolDefinition[] {
   // Handle array of tools
   if (Array.isArray(data)) {
     return data;
