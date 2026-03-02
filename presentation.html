@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>tool-lint — AI Tool Definition Linter</title>
+
+    <!-- Fonts from Fontshare -->
+    <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=clash-display@600&f[]=satoshi@400,500,700&display=swap">
+
+    <style>
+        /* ===========================================
+           CSS CUSTOM PROPERTIES (THEME)
+           Terminal Green — Developer-focused aesthetic
+           =========================================== */
+        :root {
+            /* Colors */
+            --bg-primary: #0a0f0a;
+            --bg-secondary: #0f1b0f;
+            --text-primary: #00ff41;
+            --text-secondary: #33ff66;
+            --text-muted: #66ff88aa;
+            --accent: #00ff41;
+            --accent-glow: rgba(0, 255, 65, 0.4);
+            --border-color: rgba(0, 255, 65, 0.2);
+
+            /* Typography - MUST use clamp() for responsive scaling */
+            --font-display: 'Clash Display', sans-serif;
+            --font-body: 'Satoshi', sans-serif;
+            --font-mono: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+            --title-size: clamp(1.75rem, 5vw, 4rem);
+            --subtitle-size: clamp(0.875rem, 1.8vw, 1.125rem);
+            --body-size: clamp(0.75rem, 1.3vw, 1rem);
+            --h2-size: clamp(1.25rem, 3.5vw, 2.5rem);
+            --h3-size: clamp(1rem, 2.5vw, 1.75rem);
+            --small-size: clamp(0.65rem, 1vw, 0.875rem);
+
+            /* Spacing - MUST use clamp() for responsive scaling */
+            --slide-padding: clamp(1.5rem, 4vw, 4rem);
+            --content-gap: clamp(1rem, 2vw, 2rem);
+            --element-gap: clamp(0.5rem, 1vw, 1rem);
+
+            /* Animation */
+            --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+            --duration-normal: 0.6s;
+        }
+
+        /* ===========================================
+           VIEWPORT FITTING: MANDATORY BASE STYLES
+           =========================================== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            overflow-x: hidden;
+        }
+
+        html {
+            scroll-snap-type: y mandatory;
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: var(--font-body);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+
+        /* Each slide = exact viewport height */
+        .slide {
+            width: 100vw;
+            height: 100vh;
+            height: 100dvh;
+            overflow: hidden;
+            scroll-snap-align: start;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            padding: var(--slide-padding);
+        }
+
+        /* Content container with flex for centering */
+        .slide-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            max-height: 100%;
+            overflow: hidden;
+        }
+
+        /* ===========================================
+           TERMINAL AESTHETIC
+           =========================================== */
+        
+        /* Scanline effect */
+        .slide::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                rgba(0, 255, 65, 0.03) 50%,
+                transparent 50%
+            );
+            background-size: 100% 4px;
+            pointer-events: none;
+            opacity: 0.3;
+        }
+
+        /* Grid background */
+        .slide::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+                linear-gradient(var(--border-color) 1px, transparent 1px),
+                linear-gradient(90deg, var(--border-color) 1px, transparent 1px);
+            background-size: 50px 50px;
+            pointer-events: none;
+            opacity: 0.1;
+        }
+
+        /* ===========================================
+           TYPOGRAPHY
+           =========================================== */
+        h1, h2, h3 {
+            font-family: var(--font-display);
+            font-weight: 600;
+            line-height: 1.1;
+            text-shadow: 0 0 20px var(--accent-glow);
+        }
+
+        h1 {
+            font-size: var(--title-size);
+            color: var(--text-primary);
+            letter-spacing: calc(-0.02em);
+        }
+
+        h2 {
+            font-size: var(--h2-size);
+            margin-bottom: var(--content-gap);
+        }
+
+        h3 {
+            font-size: var(--h3-size);
+            margin-bottom: var(--element-gap);
+        }
+
+        p {
+            font-size: var(--body-size);
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+
+        .subtitle {
+            font-size: var(--subtitle-size);
+            color: var(--text-muted);
+            font-weight: 400;
+            margin-top: var(--element-gap);
+        }
+
+        .tagline {
+            font-size: var(--small-size);
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            font-weight: 500;
+        }
+
+        code {
+            font-family: var(--font-mono);
+            background: rgba(0, 255, 65, 0.1);
+            padding: 0.2em 0.5em;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            font-size: 0.9em;
+        }
+
+        /* ===========================================
+           LAYOUT COMPONENTS
+           =========================================== */
+        
+        .terminal-box {
+            background: var(--bg-secondary);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            padding: clamp(1rem, 2vw, 1.5rem);
+            box-shadow: 0 0 30px var(--accent-glow);
+            position: relative;
+        }
+
+        .terminal-header {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .terminal-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--accent);
+            opacity: 0.5;
+        }
+
+        .feature-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: var(--element-gap);
+        }
+
+        .feature-list li {
+            font-size: var(--body-size);
+            line-height: 1.5;
+            padding-left: 1.5em;
+            position: relative;
+        }
+
+        .feature-list li::before {
+            content: '>';
+            position: absolute;
+            left: 0;
+            color: var(--accent);
+            font-family: var(--font-mono);
+        }
+
+        .two-column {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+            gap: var(--content-gap);
+            align-items: start;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, 120px), 1fr));
+            gap: var(--element-gap);
+            margin-top: var(--content-gap);
+        }
+
+        .stat-box {
+            text-align: center;
+            padding: clamp(0.75rem, 1.5vw, 1rem);
+            background: rgba(0, 255, 65, 0.05);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+        }
+
+        .stat-number {
+            font-size: var(--h2-size);
+            font-family: var(--font-display);
+            font-weight: 600;
+            color: var(--accent);
+            display: block;
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-label {
+            font-size: var(--small-size);
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .code-block {
+            font-family: var(--font-mono);
+            font-size: var(--small-size);
+            line-height: 1.6;
+            background: rgba(0, 0, 0, 0.5);
+            padding: clamp(0.75rem, 1.5vw, 1rem);
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            overflow-x: auto;
+            color: var(--text-secondary);
+        }
+
+        /* ===========================================
+           ANIMATIONS
+           =========================================== */
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity var(--duration-normal) var(--ease-out-expo),
+                        transform var(--duration-normal) var(--ease-out-expo);
+        }
+
+        .slide.visible .reveal {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .reveal:nth-child(1) { transition-delay: 0.1s; }
+        .reveal:nth-child(2) { transition-delay: 0.2s; }
+        .reveal:nth-child(3) { transition-delay: 0.3s; }
+        .reveal:nth-child(4) { transition-delay: 0.4s; }
+        .reveal:nth-child(5) { transition-delay: 0.5s; }
+        .reveal:nth-child(6) { transition-delay: 0.6s; }
+
+        /* ===========================================
+           NAVIGATION
+           =========================================== */
+        .progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 0%;
+            height: 3px;
+            background: var(--accent);
+            box-shadow: 0 0 10px var(--accent-glow);
+            z-index: 1000;
+            transition: width 0.3s ease;
+        }
+
+        .nav-dots {
+            position: fixed;
+            right: clamp(1rem, 3vw, 2rem);
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            z-index: 100;
+        }
+
+        .nav-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--border-color);
+            cursor: pointer;
+            transition: all 0.3s var(--ease-out-expo);
+        }
+
+        .nav-dot.active {
+            background: var(--accent);
+            box-shadow: 0 0 10px var(--accent-glow);
+            transform: scale(1.3);
+        }
+
+        .keyboard-hint {
+            position: fixed;
+            bottom: clamp(1rem, 3vw, 2rem);
+            right: clamp(1rem, 3vw, 2rem);
+            font-size: var(--small-size);
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+            z-index: 100;
+        }
+
+        /* ===========================================
+           RESPONSIVE BREAKPOINTS
+           =========================================== */
+        @media (max-height: 700px) {
+            :root {
+                --slide-padding: clamp(1rem, 3vw, 2rem);
+                --content-gap: clamp(0.75rem, 1.5vw, 1.5rem);
+                --title-size: clamp(1.5rem, 4.5vw, 3rem);
+                --h2-size: clamp(1.1rem, 3vw, 2rem);
+            }
+        }
+
+        @media (max-height: 600px) {
+            :root {
+                --slide-padding: clamp(0.75rem, 2.5vw, 1.5rem);
+                --content-gap: clamp(0.5rem, 1vw, 1rem);
+                --title-size: clamp(1.25rem, 4vw, 2.5rem);
+                --body-size: clamp(0.7rem, 1.2vw, 0.95rem);
+            }
+
+            .nav-dots, .keyboard-hint {
+                display: none;
+            }
+        }
+
+        @media (max-height: 500px) {
+            :root {
+                --slide-padding: clamp(0.5rem, 2vw, 1rem);
+                --title-size: clamp(1.1rem, 3.5vw, 2rem);
+                --h2-size: clamp(1rem, 2.5vw, 1.5rem);
+                --body-size: clamp(0.65rem, 1vw, 0.85rem);
+            }
+        }
+
+        @media (max-width: 600px) {
+            :root {
+                --title-size: clamp(1.5rem, 7vw, 3rem);
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.2s !important;
+            }
+
+            html {
+                scroll-behavior: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Progress bar -->
+    <div class="progress-bar"></div>
+
+    <!-- Navigation dots -->
+    <nav class="nav-dots"></nav>
+
+    <!-- Keyboard hint -->
+    <div class="keyboard-hint">← → or scroll to navigate</div>
+
+    <!-- ========================================= -->
+    <!-- SLIDE 1: TITLE -->
+    <!-- ========================================= -->
+    <section class="slide title-slide">
+        <div class="slide-content">
+            <p class="tagline reveal">THE FOUNDRY PRESENTS</p>
+            <h1 class="reveal">tool-lint</h1>
+            <p class="subtitle reveal">Production-ready linter for AI tool definitions</p>
+            <p class="subtitle reveal" style="margin-top: 2rem; opacity: 0.7;">Validate MCP, OpenAI, and Anthropic tool schemas before they reach production</p>
+        </div>
+    </section>
+
+    <!-- ========================================= -->
+    <!-- SLIDE 2: THE PROBLEM -->
+    <!-- ========================================= -->
+    <section class="slide">
+        <div class="slide-content">
+            <h2 class="reveal">The Problem</h2>
+            <div class="terminal-box reveal">
+                <div class="terminal-header">
+                    <span class="terminal-dot"></span>
+                    <span class="terminal-dot"></span>
+                    <span class="terminal-dot"></span>
+                </div>
+                <p style="margin-bottom: 1.5rem; color: var(--text-muted);">AI agents are only as good as the tools they're given.</p>
+                <ul class="feature-list">
+                    <li>Poorly defined tools lead to agent confusion</li>
+                    <li>Vague descriptions waste tokens on incorrect tool selection</li>
+                    <li>Missing parameters cause runtime errors</li>
+                    <li>Ambiguous enums create unpredictable behavior</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========================================= -->
+    <!-- SLIDE 3: THE SOLUTION -->
+    <!-- ========================================= -->
+    <section class="slide">
+        <div class="slide-content">
+            <h2 class="reveal">The Solution</h2>
+            <p class="reveal" style="margin-bottom: var(--content-gap); color: var(--text-secondary);">
+                <strong>tool-lint</strong> catches tool definition issues before they reach production by enforcing best practices
+            </p>
+            <div class="terminal-box reveal">
+                <div class="terminal-header">
+                    <span class="terminal-dot"></span>
+                    <span class="terminal-dot"></span>
+                    <span class="terminal-dot"></span>
+                </div>
+                <div class="code-block">$ tool-lint check tools.json<br><br>✓ get_user_profile [92/100]<br>  • 3 rules passed<br>  • Well-structured tool definition<br><br>✗ search_products [64/100]<br>  ⚠ vague-tool-description: Missing concrete action verbs<br>  ⚠ too-many-params: 7 parameters (max 5 recommended)</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========================================= -->
+    <!-- SLIDE 4: FEATURES -->
+    <!-- ========================================= -->
+    <section class="slide">
+        <div class="slide-content">
+            <h2 class="reveal">Features</h2>
+            <div class="two-column">
+                <div class="terminal-box reveal">
+                    <h3 style="color: var(--accent); margin-bottom: 1rem;">Multi-Format Support</h3>
+                    <ul class="feature-list">
+                        <li>MCP tool definitions</li>
+                        <li>OpenAI function calling</li>
+                        <li>Anthropic tool-use blocks</li>
+                    </ul>
+                </div>
+                <div class="terminal-box reveal">
+                    <h3 style="color: var(--accent); margin-bottom: 1rem;">Production Ready</h3>
+                    <ul class="feature-list">
+                        <li>TypeScript + strict mode</li>
+                        <li>Comprehensive test suite</li>
+                        <li>SARIF output for CI</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========================================= -->
+    <!-- SLIDE 5: 12 RULES -->
+    <!-- ========================================= -->
+    <section class="slide">
+        <div class="slide-content">
+            <h2 class="reveal">12 Comprehensive Rules</h2>
+            <div class="two-column">
+                <div class="reveal">
+                    <ul class="feature-list" style="margin-bottom: 1.5rem;">
+                        <li>missing-tool-description</li>
+                        <li>missing-param-description</li>
+                        <li>vague-tool-description</li>
+                        <li>vague-param-name</li>
+                        <li>no-type-specified</li>
+                        <li>ambiguous-enum</li>
+                    </ul>
+                </div>
+                <div class="reveal">
+                    <ul class="feature-list">
+                        <li>too-many-params</li>
+                        <li>duplicate-param-names</li>
+                        <li>oversized-description</li>
+                        <li>missing-required-field</li>
+                        <li>nested-object-schema</li>
+                        <li>missing-tool-name</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========================================= -->
+    <!-- SLIDE 6: USAGE -->
+    <!-- ========================================= -->
+    <section class="slide">
+        <div class="slide-content">
+            <h2 class="reveal">Quick Start</h2>
+            <div class="terminal-box reveal">
+                <div class="terminal-header">
+                    <span class="terminal-dot"></span>
+                    <span class="terminal-dot"></span>
+                    <span class="terminal-dot"></span>
+                </div>
+                <div class="code-block"># Install<br>npm install -g tool-lint<br><br># Check a file<br>tool-lint check tools.json<br><br># Check with minimum score<br>tool-lint check tools.json --min-score 80<br><br># Output SARIF for CI<br>tool-lint check tools/ --format sarif > results.sarif<br><br># View available rules<br>tool-lint rules</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========================================= -->
+    <!-- SLIDE 7: BUILD STATS -->
+    <!-- ========================================= -->
+    <section class="slide">
+        <div class="slide-content">
+            <h2 class="reveal">Build Stats</h2>
+            <div class="stats-grid reveal">
+                <div class="stat-box">
+                    <span class="stat-number">~9m</span>
+                    <span class="stat-label">Build Time</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-number">23/23</span>
+                    <span class="stat-label">Tests Pass</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-number">$0.57</span>
+                    <span class="stat-label">Build Cost</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-number">12+</span>
+                    <span class="stat-label">Lint Rules</span>
+                </div>
+            </div>
+            <div class="terminal-box reveal" style="margin-top: var(--content-gap);">
+                <p style="text-align: center; color: var(--text-muted);">
+                    Built by <strong style="color: var(--accent);">The Foundry</strong> autonomous builder<br>
+                    Pipeline: Scout (3m) → Researcher (3m) → Spec (1m) → Builder (9m)
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========================================= -->
+    <!-- SLIDE 8: CLOSING -->
+    <!-- ========================================= -->
+    <section class="slide">
+        <div class="slide-content">
+            <h1 class="reveal">Start Linting</h1>
+            <div class="terminal-box reveal" style="margin-top: var(--content-gap);">
+                <div class="terminal-header">
+                    <span class="terminal-dot"></span>
+                    <span class="terminal-dot"></span>
+                    <span class="terminal-dot"></span>
+                </div>
+                <div class="code-block">$ npm install -g tool-lint<br>$ tool-lint check your-tools.json</div>
+            </div>
+            <p class="subtitle reveal" style="margin-top: 2rem; text-align: center;">
+                <a href="https://github.com/jeevesbot-io/tool-lint" style="color: var(--accent); text-decoration: none; border-bottom: 1px solid var(--accent);">
+                    github.com/jeevesbot-io/tool-lint
+                </a>
+            </p>
+        </div>
+    </section>
+
+    <script>
+        /* ===========================================
+           SLIDE PRESENTATION CONTROLLER
+           Handles navigation, animations, and interactions
+           =========================================== */
+
+        class SlidePresentation {
+            constructor() {
+                this.slides = Array.from(document.querySelectorAll('.slide'));
+                this.currentIndex = 0;
+                this.progressBar = document.querySelector('.progress-bar');
+                this.navDots = document.querySelector('.nav-dots');
+                
+                this.init();
+            }
+
+            init() {
+                // Create navigation dots
+                this.createNavDots();
+
+                // Set up observers
+                this.setupIntersectionObserver();
+
+                // Bind events
+                this.bindKeyboard();
+                this.bindWheel();
+                this.bindTouch();
+
+                // Mark first slide as visible
+                this.slides[0].classList.add('visible');
+                this.updateProgress();
+            }
+
+            createNavDots() {
+                this.slides.forEach((slide, index) => {
+                    const dot = document.createElement('button');
+                    dot.className = 'nav-dot';
+                    if (index === 0) dot.classList.add('active');
+                    dot.addEventListener('click', () => this.goToSlide(index));
+                    this.navDots.appendChild(dot);
+                });
+            }
+
+            setupIntersectionObserver() {
+                const observer = new IntersectionObserver(
+                    (entries) => {
+                        entries.forEach(entry => {
+                            if (entry.isIntersecting) {
+                                entry.target.classList.add('visible');
+                                const index = this.slides.indexOf(entry.target);
+                                this.currentIndex = index;
+                                this.updateProgress();
+                                this.updateNavDots();
+                            }
+                        });
+                    },
+                    { threshold: 0.5 }
+                );
+
+                this.slides.forEach(slide => observer.observe(slide));
+            }
+
+            bindKeyboard() {
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'ArrowRight' || e.key === ' ') {
+                        e.preventDefault();
+                        this.next();
+                    } else if (e.key === 'ArrowLeft') {
+                        e.preventDefault();
+                        this.prev();
+                    }
+                });
+            }
+
+            bindWheel() {
+                let scrollTimeout;
+                document.addEventListener('wheel', (e) => {
+                    clearTimeout(scrollTimeout);
+                    scrollTimeout = setTimeout(() => {
+                        if (e.deltaY > 0) this.next();
+                        else if (e.deltaY < 0) this.prev();
+                    }, 50);
+                }, { passive: true });
+            }
+
+            bindTouch() {
+                let touchStart = 0;
+                document.addEventListener('touchstart', (e) => {
+                    touchStart = e.touches[0].clientY;
+                });
+
+                document.addEventListener('touchend', (e) => {
+                    const touchEnd = e.changedTouches[0].clientY;
+                    const diff = touchStart - touchEnd;
+
+                    if (Math.abs(diff) > 50) {
+                        if (diff > 0) this.next();
+                        else this.prev();
+                    }
+                });
+            }
+
+            next() {
+                if (this.currentIndex < this.slides.length - 1) {
+                    this.goToSlide(this.currentIndex + 1);
+                }
+            }
+
+            prev() {
+                if (this.currentIndex > 0) {
+                    this.goToSlide(this.currentIndex - 1);
+                }
+            }
+
+            goToSlide(index) {
+                this.slides[index].scrollIntoView({ behavior: 'smooth' });
+            }
+
+            updateProgress() {
+                const progress = ((this.currentIndex + 1) / this.slides.length) * 100;
+                this.progressBar.style.width = `${progress}%`;
+            }
+
+            updateNavDots() {
+                const dots = this.navDots.querySelectorAll('.nav-dot');
+                dots.forEach((dot, index) => {
+                    dot.classList.toggle('active', index === this.currentIndex);
+                });
+            }
+        }
+
+        // Initialize presentation
+        new SlidePresentation();
+    </script>
+</body>
+</html>
