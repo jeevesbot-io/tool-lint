@@ -1,0 +1,32 @@
+[
+  {
+    "name": "send_email",
+    "description": "Sends an email message to one or more recipients with optional attachments and formatting",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "recipients": {
+          "type": "array",
+          "description": "List of email addresses to send to",
+          "items": {
+            "type": "string"
+          }
+        },
+        "subject": {
+          "type": "string",
+          "description": "The email subject line"
+        },
+        "body": {
+          "type": "string",
+          "description": "The email message body content"
+        },
+        "priority": {
+          "type": "string",
+          "description": "Email priority level",
+          "enum": ["low", "normal", "high"]
+        }
+      },
+      "required": ["recipients", "subject", "body"]
+    }
+  }
+]

@@ -1,0 +1,44 @@
+{
+  "name": "tool-lint",
+  "version": "1.0.0",
+  "description": "A production-ready linter for AI tool definitions (MCP, OpenAI, Anthropic)",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "tool-lint": "./dist/bin/tool-lint.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest",
+    "test:coverage": "vitest --coverage",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "linter",
+    "ai",
+    "mcp",
+    "openai",
+    "anthropic",
+    "tool-definitions",
+    "schema-validation",
+    "cli"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "chalk": "^4.1.2",
+    "commander": "^11.1.0",
+    "glob": "^10.3.10",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.5",
+    "@vitest/coverage-v8": "^1.0.4",
+    "typescript": "^5.3.3",
+    "vitest": "^1.0.4"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

@@ -1,0 +1,28 @@
+
+## Rules
+
+tool-lint includes 12 comprehensive rules:
+
+### Error-level Rules
+
+1. **missing-tool-name** - Tool must have a name
+2. **missing-tool-description** - Tool must have a description
+3. **missing-required-field** - Required fields must exist in properties
+4. **no-type-specified** - Parameters must have type definitions
+5. **duplicate-param-names** - Parameter names must be unique
+
+### Warning-level Rules
+
+6. **vague-tool-description** - Description should be clear and specific (>20 chars, no vague phrases)
+7. **missing-param-description** - Parameters should have descriptions
+8. **vague-param-name** - Avoid generic names like "data", "input", "value"
+9. **too-many-params** - Tool should not have more than 8 parameters
+10. **deeply-nested-schema** - Schema nesting should not exceed 3 levels
+
+### Info-level Rules
+
+11. **ambiguous-enum** - Enum values should be clear (no single chars without context)
+12. **oversized-description** - Descriptions should be concise (<500 chars for token efficiency)
+
+View all rules:
+
